@@ -1,3 +1,4 @@
+#include "error.hpp"
 #include "iris/io/io.hpp"
 #include "iris/runtime.hpp"
 #include <iris/graphics/windowing.hpp>
@@ -8,13 +9,15 @@ namespace {
 
     namespace callback {
         void glfw_error(int code, const char *description) {
-            spdlog::critical("GLFW has encountered an error ({}): {}", code, description);
+            iris::error(iris::error_code::native_error, std::format("GLFW error {}: {}", code, description));
         }
     }
 
     void glfw_init() {
         if (glfw_inits == 0) {
-            glfwInit();
+            if (i32 ret = glfwInit(); ret != GLFW_TRUE) {
+                iris::error(iris::error_code::native_error, "glfwInit() failed");
+            }
             glfwSetErrorCallback(callback::glfw_error);
             ++glfw_inits;
         }

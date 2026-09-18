@@ -35,7 +35,8 @@ FetchContent_MakeAvailable(spdlog)
 FetchContent_MakeAvailable(glm)
 FetchContent_MakeAvailable(glfw)
 
-find_package(GLEW CONFIG REQUIRED)
+find_package(GLEW REQUIRED)
+find_package(OpenGL REQUIRED)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(NATIVE_SOURCE darwin.cpp)
@@ -98,6 +99,7 @@ target_link_libraries(${PROJECT_NAME}
         ${NATIVE_LINKED_LIBS}
         glfw
         GLEW::GLEW
+        OpenGL::OpenGL
 )
 
 

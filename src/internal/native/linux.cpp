@@ -2,8 +2,6 @@
 #include <native.hpp>
 #include <string>
 
-#error Mf you better implement this
-
 namespace iris::native {
     void terminate() noexcept {
         std::terminate();
