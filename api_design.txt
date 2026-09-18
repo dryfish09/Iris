@@ -1,0 +1,14 @@
+#include <iris/thread_manager.hpp>
+#include <iris/runtime.hpp>
+#include <spdlog/spdlog.h>
+
+int main() {
+    iris::init();
+    iris::thread_pool pool(2);
+    std::vector<int> v1 = { 10, 20 }, v2 = { 30, 40 };
+    std::vector<int> results(2);
+    iris::thread_pool::task_id task_id = pool.run_parallel([&](size_t worker_index) -> void {
+        results[worker_index] = v1[worker_index] * v2[worker_index];
+    });
+    pool.wait_for(task_id);
+}
