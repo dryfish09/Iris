@@ -7,12 +7,19 @@
 namespace iris {
     class window {
         friend class renderer;
+    public:
+        struct config {
+            bool vsync : 1;
+            u32 msaa_samples : 4; // upto 15 but 2,4,8 only
+
+            config() noexcept 
+                : vsync(false)
+                , msaa_samples(0)
+            {}
+        };
     private:
         io::key_state keys[io::keys];
-        struct {
-            bool vsync : 1 = false;
-            u32 msaa_samples : 4 = 0; // upto 15 but 2,4,8 only
-        } config;
+        config config;
 
         void *handle = nullptr; 
 
@@ -29,7 +36,7 @@ namespace iris {
         /// @brief Swaps buffers (calls underlying swap function)
         void swap_buffers() const noexcept;
 
-        /// @brief Returns if the window is still running
+        /// @brief Query window running status
         [[nodiscard]] bool running() const noexcept;
 
         /// @brief Returns if the window surface is visible to the user
@@ -40,8 +47,11 @@ namespace iris {
         /// @note Call every frame or your window will appear unresponsive
         void poll_events() noexcept;
 
+        /// @brief Query framebuffer size
+        [[nodiscard]] glm::ivec2 framebuffer_size() const noexcept;
+
         window() noexcept;
-        window(const std::string &title, glm::ivec2 size) noexcept;
+        window(const std::string &title, glm::ivec2 size, const struct config &config = {}) noexcept;
 
         ~window();
     };

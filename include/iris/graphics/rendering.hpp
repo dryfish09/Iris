@@ -1,8 +1,8 @@
 #pragma once
 
-#include "glm/fwd.hpp"
+#include <glm/glm.hpp>
 #include "iris/types.hpp"
-#include "windowing.hpp"
+#include "iris/graphics/windowing.hpp"
 
 namespace iris {
     class renderer {
@@ -25,11 +25,21 @@ namespace iris {
             ~config() noexcept {}
         };
     private:
+        struct drawcall;
+
+        std::vector<drawcall> drawcalls;
         config config;
-        void *resources;
+        const window &window;
+        glm::vec2 viewport_size_;
+        glm::vec2 viewport_offset_;
+        void *resources = nullptr;
+        bool begin_frame_called = false;
+
+        void pre_draw_check() const noexcept;
+        void flush_drawcalls() noexcept;
     public:
         /// @brief Clear the screen
-        void clear(rgba_color color = { 162, 32, 240, 255 }) noexcept;
+        void clear(rgba_color color = { 14, 14, 14, 255 }) noexcept;
 
         /// @brief Begin Frame
         /// @note Call this before doing anything graphical with the renderer
@@ -40,11 +50,15 @@ namespace iris {
         /// @note Also call this AFTER begin_frame... yeah.
         void end_frame() noexcept;
 
-#ifdef Iris_Debug
-        void debug() noexcept;
-#endif
+        /// @brief Query viewport size
+        [[nodiscard]] glm::vec2 viewport_size() const noexcept;
 
-        renderer(const window &window, struct config cfg = {}) noexcept;
+        /// @brief Query viewport offset
+        [[nodiscard]] glm::vec2 viewport_offset() const noexcept;
+
+        void debug() noexcept;
+
+        renderer(const class window &window, struct config cfg = {}) noexcept;
 
         ~renderer();
     };

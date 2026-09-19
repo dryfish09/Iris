@@ -13,7 +13,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIRECTORY})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIRECTORY})
 set(CMAKE_BUILD_TYPE Debug)
 
-project(IrisGE CXX)
+project(Iris CXX)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -36,7 +36,10 @@ FetchContent_MakeAvailable(glm)
 FetchContent_MakeAvailable(glfw)
 
 find_package(GLEW REQUIRED)
-find_package(OpenGL REQUIRED)
+if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    find_package(OpenGL REQUIRED)
+    set(OPENGL_LIB OpenGL::OpenGL)
+endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(NATIVE_SOURCE darwin.cpp)
@@ -91,6 +94,7 @@ target_include_directories(${PROJECT_NAME}
         ${glm_SOURCE_DIR}
     PRIVATE
         src/include/internal
+        src/include/resources
 )
 target_link_libraries(${PROJECT_NAME} 
     PUBLIC 
@@ -99,7 +103,7 @@ target_link_libraries(${PROJECT_NAME}
         ${NATIVE_LINKED_LIBS}
         glfw
         GLEW::GLEW
-        OpenGL::OpenGL
+        ${OPENGL_LIB}
 )
 
 
@@ -113,7 +117,7 @@ foreach(test_name IN LISTS TEST_NAMES)
     add_executable(${test_target} tests/${test_name})
     get_filename_component(test_category "${test_name}" DIRECTORY)
     get_filename_component(test_binary "${test_name}" NAME)
-    target_link_libraries(${test_target} PRIVATE IrisGE)
+    target_link_libraries(${test_target} PRIVATE Iris)
     set_target_properties(${test_target} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY
         "${CMAKE_SOURCE_DIR}/bin/tests/${test_category}"
@@ -122,3 +126,42 @@ foreach(test_name IN LISTS TEST_NAMES)
         "${test_binary}"
     )
 endforeach()
+
+set(RESOURCE_DIR "${CMAKE_SOURCE_DIR}/src/resources")
+set(GENERATED_DIR "${CMAKE_SOURCE_DIR}/src/include/resources")
+
+file(GLOB_RECURSE GLSL_FILES CONFIGURE_DEPENDS
+    "${RESOURCE_DIR}/*.glsl"
+)
+
+set(GENERATED_GLSL_HEADERS)
+
+foreach(GLSL_FILE ${GLSL_FILES})
+    file(RELATIVE_PATH REL_PATH "${RESOURCE_DIR}" "${GLSL_FILE}")
+
+    get_filename_component(DIR "${REL_PATH}" DIRECTORY)
+    get_filename_component(NAME "${REL_PATH}" NAME_WE)
+
+    string(REPLACE "/" "_" OUTPUT_NAME "${DIR}/${NAME}")
+    set(OUTPUT_NAME "${OUTPUT_NAME}.glsl.h")
+
+    set(OUTPUT "${GENERATED_DIR}/${OUTPUT_NAME}")
+
+    add_custom_command(
+        OUTPUT "${OUTPUT}"
+        COMMAND ${CMAKE_COMMAND}
+            "-DINPUT=${GLSL_FILE}"
+            "-DOUTPUT=${OUTPUT}"
+            "-P ${CMAKE_SOURCE_DIR}/cmake/embed_glsl.cmake"
+        DEPENDS "${GLSL_FILE}"
+        VERBATIM
+    )
+
+    list(APPEND GENERATED_GLSL_HEADERS "${OUTPUT}")
+endforeach()
+
+add_custom_target(generate_glsl
+    DEPENDS ${GENERATED_GLSL_HEADERS}
+)
+
+add_dependencies(Iris generate_glsl)

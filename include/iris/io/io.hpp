@@ -1,9 +1,7 @@
 #pragma once
 
-#include "../types.hpp"
-#include "glm/fwd.hpp"
+#include "nutils/types.hpp"
 #include <cstddef>
-#include <vector>
 
 namespace iris::io {
     enum class key : u32 {
@@ -141,6 +139,4 @@ namespace iris::io {
             this->now = false;
         }
     };
-
-    // TODO: Touch API
 }

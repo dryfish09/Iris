@@ -112,11 +112,7 @@ namespace iris {
         platform ret = {
             .screen_resolution = native::screen_resolution(),
             .cpus = std::thread::hardware_concurrency(),
-#ifdef Iris_Platform_Mobile
-            .capabilities = native::is_touch_connected() ? iris::platform::cap_touch : 0,
-#elifdef Iris_Platform_Desktop
             .capabilities = keyboard_bitmask | mouse_bitmask | touch_bitmask,
-#endif
             .device_name = flags.fast_startup ? "Disabled due to Fast Startup" : native::device_name(),
             .processor = native::processor_name(),
         };
@@ -127,6 +123,7 @@ namespace iris {
         
         spdlog::debug("Device: {}", ret.device_name);
         spdlog::debug("Processor: {}", ret.processor);
+        spdlog::debug("CPUs: {}", ret.cpus);
         spdlog::debug("Pretty Name: {}", ret.pretty_name);
         spdlog::debug("Screen Resolution: {}x{}", 
             ret.screen_resolution.x,
@@ -136,7 +133,6 @@ namespace iris {
         spdlog::debug("  Keyboard: {}", static_cast<bool>(ret.capabilities & iris::platform::cap_keyboard));
         spdlog::debug("  Mouse: {}", static_cast<bool>(ret.capabilities & iris::platform::cap_mouse));
         spdlog::debug("  Touch: {}", static_cast<bool>(ret.capabilities & iris::platform::cap_touch));
-        spdlog::debug("CPUs: {}", ret.cpus);
 
         spdlog::debug("Initialized platform layer in {}", timer.to_str());
 

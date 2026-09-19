@@ -1,2 +1,5 @@
 build/*
 .cache/*
+bin/*
+src/include/resources/*
+

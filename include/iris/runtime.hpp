@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../nutils/types.hpp"
+#include "nutils/types.hpp"
 #include <spdlog/spdlog.h>
 #include <glm/glm.hpp>
 #include <string_view>
-#include "platform_macros.hpp"
+#include "iris/platform_macros.hpp"
 
 namespace iris {
     constexpr bool dont_log = false;
@@ -39,7 +39,10 @@ namespace iris {
     X(invalid_configuration) \
     X(already_initialized) \
     X(memory_allocation_failure) \
-    X(unrecognized_cli_argument)
+    X(unrecognized_cli_argument) \
+    X(invalid_gl_object) \
+    X(gl_error) \
+    X(missing_shader_uniform_location) \
 
 #define X(name) name,
 

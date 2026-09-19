@@ -1,3 +1,4 @@
+#include "gl_render_layer.hpp"
 #include "error.hpp"
 #include "iris/io/io.hpp"
 #include "iris/runtime.hpp"
@@ -28,16 +29,47 @@ namespace {
             glfwTerminate();
         } else {
             --glfw_inits;
-        }
+        }        
     }
+
+    struct gpu_capabilities {
+    public:
+        u32 max_msaa_samples;
+    public:
+        static gpu_capabilities query() noexcept {
+            gpu_capabilities cap;
+            glfw_init();
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+            GLFWwindow *win = glfwCreateWindow(1, 1, "Iris — GPU Capabilities Query Window", nullptr, nullptr);
+            glfwMakeContextCurrent(win);
+            i32 ret_val = 0;
+            glGetIntegerv(GL_MAX_SAMPLES, &ret_val);
+            cap.max_msaa_samples = ret_val;
+            glfwMakeContextCurrent(nullptr);
+            glfwDestroyWindow(win);
+            glfw_terminate();
+            return cap;
+        }
+    private:
+        gpu_capabilities() = default;
+        gpu_capabilities(u32 max_msaa_samples) noexcept : max_msaa_samples(max_msaa_samples) {}
+    };
 }
 
 namespace iris {
     void window::create(const std::string &title, glm::ivec2 size) noexcept {
         glfw_init();
+        gpu_capabilities gpu_cap = gpu_capabilities::query();
         if (this->config.msaa_samples > 0) {
-            glfwWindowHint(GLFW_SAMPLES, this->config.msaa_samples);
-        }
+            if (!(this->config.msaa_samples == 2 || this->config.msaa_samples == 4 || this->config.msaa_samples == 8)) {
+                iris::error(error_code::invalid_configuration, std::format("MSAA Samples value {} is invalid, valid values are {}, {}, {}", static_cast<u32>(this->config.msaa_samples), 2, 4, 8));
+                std::exit(1);
+            }
+            glfwWindowHint(GLFW_SAMPLES, std::min(this->config.msaa_samples, gpu_cap.max_msaa_samples));
+        } 
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -51,13 +83,20 @@ namespace iris {
         );
 
         if (this->handle == nullptr) {
-            crash("Window creation failed: glfwCreateWindow returned nullptr");
+            iris::error(iris::error_code::native_error, "Window creation failed: glfwCreateWindow returned nullptr");
+            std::exit(1);
         }
 
         glfwSetWindowUserPointer(reinterpret_cast<GLFWwindow*>(this->handle), this);
 
         // whatever i'll keep this?
         glfwShowWindow(reinterpret_cast<GLFWwindow*>(this->handle));
+    }
+
+    glm::ivec2 window::framebuffer_size() const noexcept {
+        int w, h;
+        glfwGetFramebufferSize(reinterpret_cast<GLFWwindow*>(this->handle), &w, &h);
+        return { w, h };
     }
 
     bool window::running() const noexcept {
@@ -236,11 +275,13 @@ namespace iris {
         this->create("Iris — Unnamed Window", { 800, 600 });
     }
 
-    window::window(const std::string &title, glm::ivec2 sz) noexcept {
+    window::window(const std::string &title, glm::ivec2 sz, const struct config &config) noexcept {
+        this->config = config;
         this->create(title, sz);
     }
 
     window::~window() {
+        glfwMakeContextCurrent(nullptr);
         glfwDestroyWindow(reinterpret_cast<GLFWwindow*>(this->handle));
         glfw_terminate();
     }
