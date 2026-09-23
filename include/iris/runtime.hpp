@@ -6,6 +6,10 @@
 #include <string_view>
 #include "iris/platform_macros.hpp"
 
+#ifdef Iris_Platform_Android
+#include "android_native_app_glue.h"
+#endif
+
 namespace iris {
     constexpr bool dont_log = false;
 
@@ -43,6 +47,7 @@ namespace iris {
     X(invalid_gl_object) \
     X(gl_error) \
     X(missing_shader_uniform_location) \
+    X(incapable_hardware)
 
 #define X(name) name,
 
@@ -110,7 +115,25 @@ void iris_main(const iris_main_arguments &args);
         iris_main({}); \
     }
 #else
-#error Platform Glue not supported for this platform
+#define IrisPlatformGlue \
+    android_app *g_android_app; \
+    extern "C" void android_main(android_app *app) { \
+        g_android_app = app; \
+        app->onAppCmd = [](android_app *app, int32_t cmd) {}; \
+            ANativeActivity_setWindowFlags(app->activity, \
+            0, 0); \
+        while (app->window == nullptr) { \
+            int events; \
+            android_poll_source *src; \
+            ALooper_pollOnce(100, nullptr, &events, (void**)&src); \
+            if (src != nullptr) src->process(app, src); \
+            if (app->destroyRequested) return; \
+        } \
+        iris::detail::pre_main(); \
+        char *args[] = { (char*) "program", nullptr }; \
+        iris::detail::init_set_arguments(0, args); \
+        iris_main({}); \
+    }
 #endif
 
 // #ifdef PC

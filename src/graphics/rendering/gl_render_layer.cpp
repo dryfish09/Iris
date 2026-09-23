@@ -4,7 +4,7 @@
 #include "state.hpp"
 #include "bitutil.hpp"
 
-#include <GL/glew.h>
+#include <gl.h>
 
 #include <quad_frag.glsl.h>
 #include <quad_vert.glsl.h>
@@ -25,11 +25,11 @@ namespace iris::gl {
 
         return str;
     }
-    u32 compile_debug_shader() noexcept {
+    u32 compile_debug_shader(std::string shader_version_string) noexcept {
         std::string vertex = quad_vert;
-        vertex = replace_all(vertex, "//iris_replace_glsl_version", "#version 330 core");
+        vertex = replace_all(vertex, "//iris_replace_glsl_version", shader_version_string);
         std::string fragment = quad_frag;
-        fragment = replace_all(fragment, "//iris_replace_glsl_version", "#version 330 core");
+        fragment = replace_all(fragment, "//iris_replace_glsl_version", shader_version_string);
 
         const char *vcs = vertex.c_str();
         const char *fcs = fragment.c_str();
@@ -67,10 +67,8 @@ namespace iris::gl {
     }
 
 
-    void glew_init() noexcept;
-
     void init(const init_config &cfg) noexcept {
-        glew_init();
+        gl::gl_init(); // glewInit() basically
         glViewport(
             static_cast<i32>(cfg.viewport_size.x),
             static_cast<i32>(cfg.viewport_size.y),
@@ -81,22 +79,16 @@ namespace iris::gl {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &g_state.gl_state.max_texture_units);
+        i32 units = g_state.gl_state.max_texture_units;
+        glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &units);
+        g_state.gl_state.max_texture_units = std::min(units, 32);
 
         for (i32 i = 0; i < g_state.gl_state.max_texture_units; ++i) {
             bitutil::setr(i, g_state.gl_state.texture_unit_freelist);
         }
 
-        spdlog::info("OpenGL initialized with driver \"{}\"", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
-    }
-
-    void glew_init() noexcept {
-        [[maybe_unused]] static i32 _ = []() -> i32 {
-            glewExperimental = true;
-            glewInit();
-            while (glGetError() != GL_NO_ERROR) {}
-            return 0;
-        } ();
+        spdlog::info("OpenGL initialized on \"{}\"", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
+        spdlog::debug("GL_MAX_TEXTURE_IMAGE_UNITS: {} (hardware {})", g_state.gl_state.max_texture_units, units);
     }
 
     void check_error(i32 n) noexcept {
@@ -206,9 +198,5 @@ namespace iris::gl {
         return object(indices.size(), vao, vbo, ebo, shader);
     }
 
-    void cache_set_uniform_vec2(u32 gl_program, std::string_view key, glm::vec2 value) noexcept;
-
-    void cache_set_uniform_vec3(u32 gl_program, std::string_view key, glm::vec3 value) noexcept;
-
-    void cache_set_uniform_vec4(u32 gl_program, std::string_view key, glm::vec4 value) noexcept;
+    void deinit() noexcept {}
 }

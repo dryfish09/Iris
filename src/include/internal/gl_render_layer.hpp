@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include "nutils/types.hpp"
 #include <glm/glm.hpp>
-#include <GL/glew.h>
+#include <gl.h>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -66,11 +66,12 @@ namespace iris::gl {
         ~object() = default;        
     };
 
-    u32 compile_debug_shader() noexcept;
+    u32 compile_debug_shader(std::string shader_version_str) noexcept;
 
     object create_object(const std::vector<float> &vertices, const std::vector<u32> &indices, shader shader, i32 stride_size = 2, i32 gl_draw_type = GL_STATIC_DRAW) noexcept;
 
     void check_error(i32 n = -1) noexcept;
 
     void init(const init_config &cfg) noexcept;
+    void deinit() noexcept;
 }

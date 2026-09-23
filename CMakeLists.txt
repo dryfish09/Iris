@@ -13,51 +13,83 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIRECTORY})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIRECTORY})
 set(CMAKE_BUILD_TYPE Debug)
 
-project(Iris CXX)
+function (SetBinaryOutputDirectory output)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIRECTORY}/${output} PARENT_SCOPE)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIRECTORY}/${output} PARENT_SCOPE)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIRECTORY}/${output} PARENT_SCOPE)
+endfunction()
+
+project(Iris CXX C)
 
 include(FetchContent)
-FetchContent_Declare(
-    spdlog
-    GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.x
-)
-FetchContent_Declare(
-    glm
-    GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG master
-)
-FetchContent_Declare(
-    glfw
-    GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG master
-)
-FetchContent_MakeAvailable(spdlog)
-FetchContent_MakeAvailable(glm)
-FetchContent_MakeAvailable(glfw)
 
-find_package(GLEW REQUIRED)
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    find_package(OpenGL REQUIRED)
-    set(OPENGL_LIB OpenGL::OpenGL)
-endif()
+macro (SetupDesktopBuildDependencies)
+    FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(glfw)
+    find_package(GLEW REQUIRED)
+    if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+        find_package(OpenGL REQUIRED)
+        set(OPENGL_LIB OpenGL::OpenGL)
+    endif()
+    set(NATIVE_LINKED_LIBS ${NATIVE_LINKED_LIBS} glfw GLEW::GLEW)
+endmacro()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(NATIVE_SOURCE darwin.cpp)
     find_library(IOKIT_FRAMEWORK IOKit REQUIRED)
     find_library(CORE_GRAPHICS CoreGraphics REQUIRED)
     set(NATIVE_LINKED_LIBS ${IOKIT_FRAMEWORK} ${CORE_GRAPHICS})
+
+    SetBinaryOutputDirectory(darwin)
+    SetupDesktopBuildDependencies()
     message(STATUS "IrisNative found for Darwin")
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(NATIVE_SOURCE linux.cpp)
-    set(NATIVE_LINKED_LIBS)
+
+    SetBinaryOutputDirectory(linux)
+    SetupDesktopBuildDependencies()
     message(STATUS "IrisNative found for Linux")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Android")
+    if ("${ANDROID_NDK}" STREQUAL "")
+        message(FATAL_ERROR "Unrecognized ANDROID_NDK path, set with -DANDROID_NDK")
+    endif()
+    set(NATIVE_SOURCE android.cpp)
+    set(NATIVE_LINKED_LIBS android GLESv3 log egl)
+    set(NATIVE_PUBLIC_INCLUDES ${ANDROID_NDK}/sources/android/native_app_glue)
+
+    SetBinaryOutputDirectory(android)
+    message(STATUS "Android NDK found at ${ANDROID_NDK}")
+    message(STATUS "IrisNative found for Android")
 else()
     message(FATAL_ERROR "Unsupported platform, IrisNative for this platform is not available")
 endif()
 
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG v1.x
+    GIT_SHALLOW TRUE
+)
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG master
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(spdlog)
+FetchContent_MakeAvailable(glm)
+
 if ("${IRIS_WINDOW_BACKEND}" STREQUAL "GLFW")
     set(IRIS_WINDOW_SOURCE glfw.cpp)
     message(STATUS "Iris will be using GLFW as the windowing and input layer")
+elseif("${IRIS_WINDOW_BACKEND}" STREQUAL "ANativeWindow")
+    set(IRIS_WINDOW_SOURCE anativewindow.cpp)
+    message(STATUS "Iris will be using ANativeWindow as the windowing and input layer")
 else()
     message(FATAL_ERROR "Unrecognized window backend (-DIRIS_WINDOW_BACKEND)")
 endif()
@@ -80,8 +112,11 @@ add_library(${PROJECT_NAME}
     src/internal/error.cpp
     src/internal/utilities.cpp
     ${IRIS_RENDERER_SOURCES}
+    ${NATIVE_EXTRA_SOURCES}
     src/graphics/windowing/${IRIS_WINDOW_SOURCE}
     src/internal/native/${NATIVE_SOURCE}
+
+    src/lib/stb_truetype.c
 )
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -92,8 +127,11 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC 
         include
         ${glm_SOURCE_DIR}
+        ${NATIVE_PUBLIC_INCLUDES}
     PRIVATE
+        ${NATIVE_INCLUDES}
         src/include/internal
+        src/include/lib
         src/include/resources
 )
 target_link_libraries(${PROJECT_NAME} 
@@ -101,8 +139,6 @@ target_link_libraries(${PROJECT_NAME}
         spdlog::spdlog 
     PRIVATE 
         ${NATIVE_LINKED_LIBS}
-        glfw
-        GLEW::GLEW
         ${OPENGL_LIB}
 )
 
@@ -114,17 +150,27 @@ set(TEST_NAMES
 
 foreach(test_name IN LISTS TEST_NAMES)
     string(REPLACE "/" "_" test_target "${test_name}")
-    add_executable(${test_target} tests/${test_name})
+
+    if(CMAKE_SYSTEM_NAME MATCHES "Android")
+        add_library(${test_target} SHARED tests/${test_name} ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
+    else()
+        add_executable(${test_target} tests/${test_name})
+    endif()
+
     get_filename_component(test_category "${test_name}" DIRECTORY)
-    get_filename_component(test_binary "${test_name}" NAME)
-    target_link_libraries(${test_target} PRIVATE Iris)
+
+    string(REGEX REPLACE "\\.cpp$" "" test_output "${test_name}")
+    string(REPLACE "/" "_" test_output "${test_output}")
+
     set_target_properties(${test_target} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY
-        "${CMAKE_SOURCE_DIR}/bin/tests/${test_category}"
+        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/tests"
 
         OUTPUT_NAME
-        "${test_binary}"
+        "${test_output}"
     )
+
+    target_link_libraries(${test_target} PRIVATE Iris)
 endforeach()
 
 set(RESOURCE_DIR "${CMAKE_SOURCE_DIR}/src/resources")

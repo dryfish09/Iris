@@ -1,3 +1,4 @@
+#include "gl.h"
 #include <cstdlib>
 #include <exception>
 #include <native.hpp>
@@ -6,7 +7,15 @@
 #include <sys/sysctl.h>
 #include <vector>
 
+namespace iris::gl {
+    void gl_init() noexcept {
+        glewExperimental = true;
+        glewInit();
+    }
+}
+
 namespace iris::native {
+    void init() noexcept {}
     void terminate() noexcept {
         std::terminate(); // bor fuck off
     }

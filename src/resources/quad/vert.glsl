@@ -1,4 +1,5 @@
 //iris_replace_glsl_version
+precision highp float;
 layout (location = 0) in vec2 a_pos;
 uniform vec2 iris_pos;
 uniform vec2 iris_size;

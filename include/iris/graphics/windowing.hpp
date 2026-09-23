@@ -2,7 +2,8 @@
 
 #include <string>
 #include <glm/glm.hpp>
-#include "../io/io.hpp"
+#include <unordered_map>
+#include "iris/io/io.hpp"
 
 namespace iris {
     class window {
@@ -10,10 +11,18 @@ namespace iris {
     public:
         struct config {
             bool vsync : 1;
+            /// @brief OpenGL ES mode
+            /// @note Does not actually create an OpenGL ES window
+            ///       on desktop platforms, only signals to the renderer
+            ///       to use OpenGL ES mode i.e. a standards-compliant mode
+            ///       so it can work across a variety of OpenGL ES devices
+            ///       and disables Desktop-OpenGL only features.
+            bool gles : 1;
             u32 msaa_samples : 4; // upto 15 but 2,4,8 only
 
             config() noexcept 
                 : vsync(false)
+                , gles(false)
                 , msaa_samples(0)
             {}
         };
@@ -31,7 +40,7 @@ namespace iris {
 
         // @brief Get the touch point(s) on a single-touch or multi-touch
         //        surface
-        [[nodiscard]] std::vector<glm::vec2> touch_points() noexcept;
+        [[nodiscard]] std::unordered_map<i32, glm::vec2> touch_points() noexcept;
 
         /// @brief Swaps buffers (calls underlying swap function)
         void swap_buffers() const noexcept;

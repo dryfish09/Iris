@@ -1,8 +1,17 @@
 #include <exception>
 #include <native.hpp>
 #include <string>
+#include <gl.h>
+
+namespace iris::gl {
+    void gl_init() noexcept {
+        glewExperimental = true;
+        glewInit();
+    }
+}
 
 namespace iris::native {
+    void init() noexcept {}
     void terminate() noexcept {
         std::terminate();
     }

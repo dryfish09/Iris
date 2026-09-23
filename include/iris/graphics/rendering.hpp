@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include "glm/fwd.hpp"
 #include "iris/types.hpp"
 #include "iris/graphics/windowing.hpp"
 
@@ -55,6 +56,12 @@ namespace iris {
 
         /// @brief Query viewport offset
         [[nodiscard]] glm::vec2 viewport_offset() const noexcept;
+
+        /// @brief Draw a rectangle
+        void draw_rectangle(glm::vec2 pos, glm::vec2 size, rgba_color color) noexcept;
+
+        /// @brief Draw the FPS counter
+        void draw_fps(glm::vec2 pos = { 10, 10 }) noexcept;
 
         void debug() noexcept;
 

@@ -1,9 +1,12 @@
 #include "glm/fwd.hpp"
 #include "iris/types.hpp"
+#include <fstream>
 #include <iris/graphics/rendering.hpp>
 #include "gl_render_layer.hpp"
 #include "spdlog/spdlog.h"
 #include <assert.hpp>
+#include <string>
+#include "../lib/stb_truetype.h"
 
 namespace iris {
     namespace {
@@ -14,6 +17,7 @@ namespace iris {
 
     struct renderer::drawcall {
         gl::object &object;
+        rgba_color color;
         glm::vec2 pos;
         glm::vec2 size;
     };
@@ -21,6 +25,7 @@ namespace iris {
     renderer::renderer(const class window &window, struct config cfg) noexcept
         : window(window) 
     {
+        this->config.gles = window.config.gles;
         this->resources = new gl_resources();
         window.make_gl_context_current();
         gl::init({
@@ -36,7 +41,16 @@ namespace iris {
                             ? gl::depth_func::less
                             : gl::depth_func::none,
         });
-        gl::shader shader = gl::compile_debug_shader();
+        if (!this->config.gles) {
+            glEnable(0x809D /* GL_MULTISAMPLE, not defined on GL ES tho, and I don't want to use more macros */);
+        }
+        std::string shader_version_string;
+        if (this->config.gles) {
+            shader_version_string = "#version 300 es\n";
+        } else {
+            shader_version_string = "#version 330 core\n";
+        }
+        gl::shader shader = gl::compile_debug_shader(shader_version_string);
         shader.uniforms["p_color"] = glm::vec4(1, 0, 0, 1);
         shader.update_uniforms();
         reinterpret_cast<gl_resources*>(this->resources)->obj_quad = gl::create_object({ 0, 0, 1, 0, 1, 1, 0, 1 }, { 0, 1, 2, 2, 3, 0, }, shader);
@@ -107,13 +121,32 @@ namespace iris {
         return this->viewport_offset_;
     }
 
+    void renderer::draw_fps(glm::vec2 pos) noexcept {
+        (void) pos;
+    }
+
 #ifdef Iris_Debug
     void renderer::debug() noexcept {
         pre_draw_check();
         gl_resources *res = reinterpret_cast<gl_resources*>(this->resources); 
-        this->drawcalls.emplace_back(res->obj_quad, glm::vec2 { 50, 50 } / this->viewport_size_, glm::vec2 { 200, 200 } / this->viewport_size_);
+        this->drawcalls.emplace_back(res->obj_quad, rgba_color { 255, 255, 0, 255 }, glm::vec2 { 50, 50 } / this->viewport_size_, glm::vec2 { 200, 200 } / this->viewport_size_);
     }
 #endif
+
+    void renderer::draw_rectangle(glm::vec2 pos, glm::vec2 size, rgba_color color) noexcept {
+        pre_draw_check();
+
+        gl_resources *res = reinterpret_cast<gl_resources*>(this->resources);
+
+        drawcall dc = {
+            .object = res->obj_quad,
+            .color = color,
+            .pos = pos / this->viewport_size_,
+            .size = size / this->viewport_size_
+        };
+
+        this->drawcalls.push_back(std::move(dc));
+    }
 
     renderer::~renderer() {
         delete reinterpret_cast<gl_resources*>(this->resources);

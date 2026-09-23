@@ -5,6 +5,10 @@
 #include <spdlog/spdlog.h>
 #include <gl_render_layer.hpp>
 
+#define Iris_EncodeGLVersion(major, minor) ((major * 10) + (minor))
+#define Iris_DecodeGLVersionMajor(encoded) ((encoded) / 10)
+#define Iris_DecodeGLVersionMinor(encoded) ((encoded) % 10)
+
 namespace iris::internal {
     struct global_state {
         struct {
@@ -12,6 +16,7 @@ namespace iris::internal {
             u32 bound_texture = 0;
             u32 texture_unit_freelist = 0;
             i32 max_texture_units = 0;
+            u32 gl_version = 0;
         } gl_state;
         log_hook log_hook = nullptr;
     };

@@ -5,6 +5,7 @@
 #include <string_view>
 
 namespace iris::native {
+    void init() noexcept;
     [[noreturn]] void terminate() noexcept;
     [[nodiscard]] bool keyboard_connected() noexcept;
     [[nodiscard]] bool mouse_connected() noexcept;

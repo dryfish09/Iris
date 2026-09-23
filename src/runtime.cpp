@@ -75,6 +75,7 @@ namespace iris {
             static bool ran = false;
             if (ran) return;
             ran = true;
+            native::init();
             spdlog::set_pattern("[%H:%M:%S] [%^%l%$] %v");
 #ifdef Iris_Debug
             spdlog::set_level(spdlog::level::trace);
@@ -122,8 +123,7 @@ namespace iris {
         timer.stop();
         
         spdlog::debug("Device: {}", ret.device_name);
-        spdlog::debug("Processor: {}", ret.processor);
-        spdlog::debug("CPUs: {}", ret.cpus);
+        spdlog::debug("Processor: {} ({})", ret.processor, ret.cpus);
         spdlog::debug("Pretty Name: {}", ret.pretty_name);
         spdlog::debug("Screen Resolution: {}x{}", 
             ret.screen_resolution.x,
