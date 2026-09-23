@@ -69,7 +69,7 @@ namespace {
                 glGetIntegerv(GL_MAX_SAMPLES, &max_msaa);
                 i32 actual_major, actual_minor;
                 glGetIntegerv(GL_MAJOR_VERSION, &actual_major);
-                glGetIntegerv(GL_MAJOR_VERSION, &actual_minor);
+                glGetIntegerv(GL_MINOR_VERSION, &actual_minor);
                 if (actual_major != i32(major) || actual_minor != i32(minor)) {
                     cleanup();
                     continue;
