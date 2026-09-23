@@ -130,8 +130,8 @@ target_include_directories(${PROJECT_NAME}
         ${NATIVE_PUBLIC_INCLUDES}
     PRIVATE
         ${NATIVE_INCLUDES}
+        src/include
         src/include/internal
-        src/include/lib
         src/include/resources
 )
 target_link_libraries(${PROJECT_NAME} 

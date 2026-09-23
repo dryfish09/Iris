@@ -37,6 +37,7 @@ namespace iris {
     };
 
 #define Iris_Error_Codes       \
+    X(unknown_error) \
     X(native_error) \
     X(texture_units_exhausted) \
     X(outdated_gpu_driver) \
@@ -47,7 +48,11 @@ namespace iris {
     X(invalid_gl_object) \
     X(gl_error) \
     X(missing_shader_uniform_location) \
-    X(incapable_hardware)
+    X(incapable_hardware) \
+    X(invalid_asset_manager_key) \
+    X(file_not_found) \
+    X(filesystem_error) \
+    X(malformed_input) \
 
 #define X(name) name,
 

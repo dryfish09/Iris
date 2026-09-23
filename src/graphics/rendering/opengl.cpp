@@ -6,7 +6,7 @@
 #include "spdlog/spdlog.h"
 #include <assert.hpp>
 #include <string>
-#include "../lib/stb_truetype.h"
+#include "lib/stb_truetype.h"
 
 namespace iris {
     namespace {
